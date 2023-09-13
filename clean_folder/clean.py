@@ -125,18 +125,6 @@ def unpack_archives():
 
 
 def main():
-    make_heap()  # перемещаем все в кучу в папку unknown
-    remove_empty_folders()  # Удаляем пустые папки
-    make_dir()  # Создаем папки назначения
-    move_files()  # Переносим файлы известных типов в папки назначения
-    find_unknown_ext()  # Собираем неизвестные расширения
-    # rename_all_files()  # Переводим названия фалов в транслит
-    unpack_archives()  # Распаковываем архивы
-    print("Известные найденные расширения файлов: ", known_ext)
-    print("Неизвестные найденные расширения файлов: ", unknown_ext)
-
-
-if __name__ == "__main__":
     # Taking an argument from command line
     try:
         source_folder = argv[1]
@@ -146,10 +134,7 @@ if __name__ == "__main__":
         if not source_folder:
             print("Можливо наступного разу?")
             exit()
-
-    # source_folder = r"w:\Projects\HW1\1"
     home = Path(source_folder)
-
     # Cyrillic and latin
     cyr_lat = {
         "а": "a",
@@ -236,5 +221,16 @@ if __name__ == "__main__":
     # Sets for known and unknown extentions
     known_ext = set()
     unknown_ext = set()
+    make_heap()  # перемещаем все в кучу в папку unknown
+    remove_empty_folders()  # Удаляем пустые папки
+    make_dir()  # Создаем папки назначения
+    move_files()  # Переносим файлы известных типов в папки назначения
+    find_unknown_ext()  # Собираем неизвестные расширения
+    # rename_all_files()  # Переводим названия фалов в транслит
+    unpack_archives()  # Распаковываем архивы
+    print("Известные найденные расширения файлов: ", known_ext)
+    print("Неизвестные найденные расширения файлов: ", unknown_ext)
 
+
+if __name__ == "__main__":
     main()
