@@ -13,7 +13,7 @@ import shutil
 
 
 # Rename file name from cyrillic to latin
-def normalize(cyrillic_name: str) -> str:
+def normalize(cyrillic_name: str, cyr_lat: dict) -> str:
     ext = cyrillic_name[cyrillic_name.rfind(".") :]
     cyrillic_name = cyrillic_name[: cyrillic_name.rfind(".")]
     name_out = ""
@@ -41,7 +41,7 @@ def normalize(cyrillic_name: str) -> str:
 #             next_file.replace(normalize(name))
 
 
-def make_dir():
+def make_dir(dest_folders):
     for key in dest_folders:
         try:
             os.mkdir(dest_folders[key])
@@ -65,21 +65,21 @@ def confirm_replace(source_file: Path, dest: Path, new_dest: Path = None):
         confirm_replace(source_file, dest, new_dest)
 
 
-def make_heap():
+def make_heap(home: Path, dest_folders: dict, cyr_lat: dict):
     try:
         os.mkdir(dest_folders["unknown"])
     except:
         pass
     for next_file in home.rglob("*"):
         if next_file.is_file():
-            name = normalize(str(next_file.name))
+            name = normalize(str(next_file.name), cyr_lat)
             try:
                 os.rename(next_file, dest_folders["unknown"].joinpath(name))
             except:
                 confirm_replace(next_file, dest_folders["unknown"].joinpath(name))
 
 
-def move_files():
+def move_files(home: Path, dest_folders: dict, extentions: dict, known_ext: set) -> set:
     for key in extentions:
         for ext in extentions[key]:
             for next_file in home.glob(f"**/*.{ext}"):
@@ -89,9 +89,10 @@ def move_files():
                     os.rename(next_file, dest_folders[key].joinpath(name))
                 except:
                     confirm_replace(next_file, dest_folders[key].joinpath(name))
+    return known_ext
 
 
-def find_unknown_ext():
+def find_unknown_ext(dest_folders: dict, known_ext: set, unknown_ext: set) -> set:
     # Собираем неизвестные расширения в множество
     for next_file in Path(dest_folders["unknown"]).glob("*.*"):
         name = next_file.name
@@ -99,9 +100,10 @@ def find_unknown_ext():
         next_file = str(next_file)
         if ext not in known_ext:
             unknown_ext.add(next_file[next_file.rfind(".") + 1 :].lower())
+    return unknown_ext
 
 
-def remove_empty_folders():
+def remove_empty_folders(source_folder):
     for root, dirs, files in os.walk(source_folder, topdown=False):
         for d in dirs:
             curpath = os.path.join(root, d)
@@ -109,7 +111,7 @@ def remove_empty_folders():
                 os.rmdir(curpath)
 
 
-def unpack_archives():
+def unpack_archives(dest_folders: dict):
     for next_file in Path(dest_folders["archives"]).glob("*.*"):
         name = str(next_file)
         dest = name[: name.rfind(".")] + "\\"
@@ -135,6 +137,20 @@ def main():
             print("Можливо наступного разу?")
             exit()
     home = Path(source_folder)
+    # Destination folders
+    dest_folders = {
+        "image": home.joinpath("images"),
+        "doc": home.joinpath("documents"),
+        "video": home.joinpath("video"),
+        "audio": home.joinpath("audio"),
+        "archives": home.joinpath("archives"),
+        "unknown": home.joinpath("unknown"),
+        # "doc": source_folder + "\\documents",
+        # "video": source_folder + "\\video",
+        # "audio": source_folder + "\\audio",
+        # "archives": source_folder + "\\archives",
+        # "unknown": source_folder + "\\unknown",
+    }
     # Cyrillic and latin
     cyr_lat = {
         "а": "a",
@@ -172,21 +188,6 @@ def main():
         "я": "ja",
     }
 
-    # Destination folders
-    dest_folders = {
-        "image": home.joinpath("images"),
-        "doc": home.joinpath("documents"),
-        "video": home.joinpath("video"),
-        "audio": home.joinpath("audio"),
-        "archives": home.joinpath("archives"),
-        "unknown": home.joinpath("unknown"),
-        # "doc": source_folder + "\\documents",
-        # "video": source_folder + "\\video",
-        # "audio": source_folder + "\\audio",
-        # "archives": source_folder + "\\archives",
-        # "unknown": source_folder + "\\unknown",
-    }
-
     extentions = {
         "image": ["JPEG", "PNG", "JPG", "SVG"],
         "doc": ["DOC", "DOCX", "TXT", "PDF", "XLSX", "PPTX", "XLS"],
@@ -221,13 +222,18 @@ def main():
     # Sets for known and unknown extentions
     known_ext = set()
     unknown_ext = set()
-    make_heap()  # перемещаем все в кучу в папку unknown
-    remove_empty_folders()  # Удаляем пустые папки
-    make_dir()  # Создаем папки назначения
-    move_files()  # Переносим файлы известных типов в папки назначения
-    find_unknown_ext()  # Собираем неизвестные расширения
+
+    make_heap(home, dest_folders, cyr_lat)  # перемещаем все в кучу в папку unknown
+    remove_empty_folders(source_folder)  # Удаляем пустые папки
+    make_dir(dest_folders)  # Создаем папки назначения
+    known_ext = move_files(
+        home, dest_folders, extentions, known_ext
+    )  # Переносим файлы известных типов в папки назначения
+    unknown_ext = find_unknown_ext(
+        dest_folders, known_ext, unknown_ext
+    )  # Собираем неизвестные расширения
     # rename_all_files()  # Переводим названия фалов в транслит
-    unpack_archives()  # Распаковываем архивы
+    unpack_archives(dest_folders)  # Распаковываем архивы
     print("Известные найденные расширения файлов: ", known_ext)
     print("Неизвестные найденные расширения файлов: ", unknown_ext)
 
